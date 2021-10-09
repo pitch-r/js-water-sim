@@ -21,21 +21,88 @@
         return o;
     }
 
+    // Simulation state variables
     let grid = {
-        h_data: new Float32Array(grid_size.w * grid_size.h),
-        u_data: new Float32Array(grid_size.w * grid_size.h),
+        h_data: new Float32Array(grid_size.w * grid_size.h), // water delta-height
+        u_data: new Float32Array(grid_size.w * grid_size.h), // h changing velocity
         hn_data: new Float32Array(grid_size.w * grid_size.h), // for double buffering h
     };
+    // Map into easier to access 2d array
     grid.h = split_subarray(grid.h_data, grid_size.w);
     grid.u = split_subarray(grid.u_data, grid_size.w);
     grid.hn = split_subarray(grid.hn_data, grid_size.w);
+
+    // Simulation code
+    function timestep() {
+        // Open/Free boundary condition
+        if (boundary_type.top == 'free')
+            for (let y = 1; y < grid_size.h - 1; y++)
+                grid.h[y][0] = grid.h[y][1];
+        if (boundary_type.bottom == 'free')
+            for (let y = 1; y < grid_size.h - 1; y++)
+                grid.h[y][grid_size.w - 1] = grid.h[y][grid_size.w - 2];
+        if (boundary_type.left == 'free')
+            for (let x = 1; x < grid_size.w - 1; x++)
+                grid.h[0][x].set(grid.h[1]);
+        if (boundary_type.rights == 'free')
+            for (let x = 1; x < grid_size.w - 1; x++)
+                grid.h[grid_size.h - 1].set(grid.h[grid_size.h - 2]);
+
+        // Closed boundary condition
+        if (boundary_type.top == 'closed')
+            for (let y = 1; y < grid_size.h - 1; y++)
+                grid.h[y][0] = 0;
+        if (boundary_type.bottom == 'closed')
+            for (let y = 1; y < grid_size.h - 1; y++)
+                grid.h[y][grid_size.w - 1] = 0;
+        if (boundary_type.left == 'closed')
+            grid.h[0].fill(0);
+        if (boundary_type.rights == 'closed')
+            grid.h[grid_size.h - 1].fill(0);
+
+        for (let y = 1; y < grid_size.h - 1; y++) {
+            for (let x = 1; x < grid_size.w - 1; x++) {
+                let delta = ((
+                    grid.h[y - 1][x] +
+                    grid.h[y][x - 1] +
+                    grid.h[y][x + 1] +
+                    grid.h[y + 1][x]) * 0.25
+                    - grid.h[y][x]) * (velo * velo);
+                grid.u[y][x] = grid.u[y][x] * 0.999 + delta;
+                grid.hn[y][x] = grid.h[y][x] * 0.999 + grid.u[y][x];
+            }
+        }
+
+        // Matched boundary condition
+        const _vdiv = 1 / (1 + velo);
+        if (boundary_type.top == 'matched')
+            for (let y = 1; y < grid_size.h - 1; y++)
+                grid.hn[y][0] = (grid.h[y][0] + velo * grid.h[y][1]) * _vdiv;
+        if (boundary_type.bottom == 'matched')
+            for (let y = 1; y < grid_size.h - 1; y++)
+                grid.hn[y][grid_size.w - 1] = (grid.h[y][grid_size.w - 1] + velo * grid.h[y][grid_size.w - 2]) * _vdiv;
+        if (boundary_type.left == 'matched')
+            for (let x = 1; x < grid_size.w - 1; x++)
+                grid.hn[0][x] = (grid.h[0][x] + velo * grid.h[1][x]) * _vdiv;
+        if (boundary_type.rights == 'matched')
+            for (let x = 1; x < grid_size.w - 1; x++)
+                grid.hn[grid_size.h - 1][x] = (grid.h[grid_size.h - 1][x] + velo * grid.h[grid_size.h - 2][x]) * _vdiv;
+
+        // Swap buffer
+        [grid.h, grid.hn] = [grid.hn, grid.h];
+        [grid.h_data, grid.hn_data] = [grid.hn_data, grid.h_data];
+
+        add_external_force();
+    }
+
+    // Rendering code
 
     const canvas_data = document.getElementById("canvas-data");
     const canvas_slice = document.getElementById("canvas-slice");
     const canvas_refrac = document.getElementById("canvas-refrac");
 
     let crefrac_bg = undefined;
-    let crefrac_bg_small = undefined;
+    let crefrac_bg_small = undefined; // Downscaled image fit for refrac canvas
     {
         // Refraction background image load / cache
         let img = document.getElementById('refrac-bg');
@@ -101,6 +168,8 @@
             const cw = canvas_refrac.width;
             const ch = canvas_refrac.height;
             const ctx = canvas_refrac.getContext('2d');
+
+            // Prepare canvas with undistorted bg
             crefrac_buf.data.set(crefrac_bg_small);
             // crefrac_buf.data.fill(255);
             for (let y = 1; y < ch - 1; y++) {
@@ -148,6 +217,9 @@
         }
     }
 
+
+    // Event Listeners
+
     let mouse = {
         pressed: false,
         x: 0,
@@ -187,6 +259,7 @@
     canvas_refrac.addEventListener('touchend', handleTouchEvent);
     canvas_refrac.addEventListener('touchmove', handleTouchEvent);
 
+    // Add value to simulation grid in circular shape
     function paint_grid(grid_var, tx, ty, brush_size, power) {
         const brush2 = pow2(brush_size);
         const bound = {
@@ -204,67 +277,9 @@
     }
 
     let frame = 0;
-    function timestep() {
+    function add_external_force() {
+        // Called every timestep
         frame++;
-
-        // Open/Free boundary condition
-        if (boundary_type.top == 'free')
-            for (let y = 1; y < grid_size.h - 1; y++)
-                grid.h[y][0] = grid.h[y][1];
-        if (boundary_type.bottom == 'free')
-            for (let y = 1; y < grid_size.h - 1; y++)
-                grid.h[y][grid_size.w - 1] = grid.h[y][grid_size.w - 2];
-        if (boundary_type.left == 'free')
-            for (let x = 1; x < grid_size.w - 1; x++)
-                grid.h[0][x] = grid.h[1][x];
-        if (boundary_type.rights == 'free')
-            for (let x = 1; x < grid_size.w - 1; x++)
-                grid.h[grid_size.h - 1][x] = grid.h[grid_size.h - 2][x];
-        // TODO: refactor to set subarray
-
-        // Closed boundary condition
-        if (boundary_type.top == 'closed')
-            for (let y = 1; y < grid_size.h - 1; y++)
-                grid.h[y][0] = 0;
-        if (boundary_type.bottom == 'closed')
-            for (let y = 1; y < grid_size.h - 1; y++)
-                grid.h[y][grid_size.w - 1] = 0;
-        if (boundary_type.left == 'closed')
-            grid.h[0].fill(0);
-        if (boundary_type.rights == 'closed')
-            grid.h[grid_size.h - 1].fill(0);
-
-        for (let y = 1; y < grid_size.h - 1; y++) {
-            for (let x = 1; x < grid_size.w - 1; x++) {
-                let delta = ((
-                    grid.h[y - 1][x] +
-                    grid.h[y][x - 1] +
-                    grid.h[y][x + 1] +
-                    grid.h[y + 1][x]) * 0.25
-                    - grid.h[y][x]) * (velo * velo);
-                grid.u[y][x] = grid.u[y][x] * 0.999 + delta;
-                grid.hn[y][x] = grid.h[y][x] * 0.999 + grid.u[y][x];
-            }
-        }
-        // Matched boundary condition
-        const _vdiv = 1 / (1 + velo);
-        if (boundary_type.top == 'matched')
-            for (let y = 1; y < grid_size.h - 1; y++)
-                grid.hn[y][0] = (grid.h[y][0] + velo * grid.h[y][1]) * _vdiv;
-        if (boundary_type.bottom == 'matched')
-            for (let y = 1; y < grid_size.h - 1; y++)
-                grid.hn[y][grid_size.w - 1] = (grid.h[y][grid_size.w - 1] + velo * grid.h[y][grid_size.w - 2]) * _vdiv;
-        if (boundary_type.left == 'matched')
-            for (let x = 1; x < grid_size.w - 1; x++)
-                grid.hn[0][x] = (grid.h[0][x] + velo * grid.h[1][x]) * _vdiv;
-        if (boundary_type.rights == 'matched')
-            for (let x = 1; x < grid_size.w - 1; x++)
-                grid.hn[grid_size.h - 1][x] = (grid.h[grid_size.h - 1][x] + velo * grid.h[grid_size.h - 2][x]) * _vdiv;
-
-        // Swap buffer
-        [grid.h, grid.hn] = [grid.hn, grid.h];
-        [grid.h_data, grid.hn_data] = [grid.hn_data, grid.h_data];
-
         if (mouse.pressed) {
             paint_grid(grid.h, mouse.x, mouse.y, 5, 0.3);
         } else {
@@ -280,6 +295,8 @@
 
     let lasttimestamp = undefined;
     let fps_smooth = undefined;
+
+    // Main loop
     function update(timestamp) {
         for (let repeat = timestep_per_frame; repeat > 0; repeat--)
             timestep();
