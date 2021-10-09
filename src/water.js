@@ -37,9 +37,8 @@
     let crefrac_bg = undefined;
     let crefrac_bg_small = undefined;
     {
-        let img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.src = './bg.jpg';
+        // Refraction background image load / cache
+        let img = document.getElementById('refrac-bg');
         img.onload = function () {
             const canvas = document.createElement('canvas');
             canvas.width = grid_size.w;
