@@ -43,7 +43,7 @@
                 grid.h[y][grid_size.w - 1] = grid.h[y][grid_size.w - 2];
         if (boundary_type.left == 'free')
             for (let x = 1; x < grid_size.w - 1; x++)
-                grid.h[0][x].set(grid.h[1]);
+                grid.h[0].set(grid.h[1]);
         if (boundary_type.rights == 'free')
             for (let x = 1; x < grid_size.w - 1; x++)
                 grid.h[grid_size.h - 1].set(grid.h[grid_size.h - 2]);
@@ -121,6 +121,8 @@
             ctx.drawImage(img, 0, 0, cw, ch);
             crefrac_bg_small = ctx.getImageData(0, 0, cw, ch).data;
         };
+        if (img.complete)
+            img.onload();
     }
 
     let cdata_buf = canvas_data.getContext('2d').createImageData(grid_size.w, grid_size.h);
