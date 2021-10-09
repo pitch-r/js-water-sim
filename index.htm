@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width">
-    <title>Water</title>
+    <title>Water sim</title>
     <style>
         #canvas-data,
         #canvas-refrac {
@@ -18,6 +18,10 @@
             vertical-align: middle;
         }
 
+        #refrac-bg {
+            height: 0;
+        }
+
         body {
             font-family: sans-serif;
         }
@@ -25,11 +29,12 @@
 </head>
 
 <body>
-    <h1>CPU only water</h1>
+    <h1><a href="https://github.com/pitch-r/js-water-sim">Pure JS water</a></h1>
     <canvas id="canvas-refrac" width="160" height="120"></canvas><br>
     <canvas id="canvas-data" width="320" height="240"></canvas>
     <canvas id="canvas-slice" width="320" height="100"></canvas>
-    <script src="water.js"></script>
+    <img id="refrac-bg" src="./assets/bg.jpg" crossorigin="anonymous">
+    <script src="./src/water.js"></script>
 </body>
 
 </html>
