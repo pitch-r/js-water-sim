@@ -7,8 +7,8 @@
         left: 'free',
         right: 'free',
     };
-    const velo = 1; // wave propagation in cell per timestep [ must <1 ]
-    const timestep_per_frame = 4;
+    const velo = 0.7; // wave propagation in cell per timestep [ must <1 ]
+    const timestep_per_frame = 3;
 
     // Utility functions (mem & math)
     function pow2(x) { return x * x; }
@@ -35,56 +35,56 @@
     // Simulation code
     function timestep() {
         // Open/Free boundary condition
-        if (boundary_type.top == 'free')
+        if (boundary_type.left == 'free')
             for (let y = 1; y < grid_size.h - 1; y++)
                 grid.h[y][0] = grid.h[y][1];
-        if (boundary_type.bottom == 'free')
+        if (boundary_type.right == 'free')
             for (let y = 1; y < grid_size.h - 1; y++)
                 grid.h[y][grid_size.w - 1] = grid.h[y][grid_size.w - 2];
-        if (boundary_type.left == 'free')
+        if (boundary_type.top == 'free')
             for (let x = 1; x < grid_size.w - 1; x++)
-                grid.h[0][x].set(grid.h[1]);
-        if (boundary_type.rights == 'free')
+                grid.h[0].set(grid.h[1]);
+        if (boundary_type.bottom == 'free')
             for (let x = 1; x < grid_size.w - 1; x++)
                 grid.h[grid_size.h - 1].set(grid.h[grid_size.h - 2]);
 
         // Closed boundary condition
-        if (boundary_type.top == 'closed')
+        if (boundary_type.left == 'closed')
             for (let y = 1; y < grid_size.h - 1; y++)
                 grid.h[y][0] = 0;
-        if (boundary_type.bottom == 'closed')
+        if (boundary_type.right == 'closed')
             for (let y = 1; y < grid_size.h - 1; y++)
                 grid.h[y][grid_size.w - 1] = 0;
-        if (boundary_type.left == 'closed')
+        if (boundary_type.top == 'closed')
             grid.h[0].fill(0);
-        if (boundary_type.rights == 'closed')
+        if (boundary_type.bottom == 'closed')
             grid.h[grid_size.h - 1].fill(0);
 
         for (let y = 1; y < grid_size.h - 1; y++) {
             for (let x = 1; x < grid_size.w - 1; x++) {
-                let delta = ((
+                let delta = (velo * velo) * (
                     grid.h[y - 1][x] +
                     grid.h[y][x - 1] +
                     grid.h[y][x + 1] +
-                    grid.h[y + 1][x]) * 0.25
-                    - grid.h[y][x]) * (velo * velo);
-                grid.u[y][x] = grid.u[y][x] * 0.999 + delta;
-                grid.hn[y][x] = grid.h[y][x] * 0.999 + grid.u[y][x];
+                    grid.h[y + 1][x] -
+                    grid.h[y][x] * 4);
+                grid.u[y][x] = grid.u[y][x] * 0.997 + delta;
+                grid.hn[y][x] = grid.h[y][x] * 0.997 + grid.u[y][x];
             }
         }
 
         // Matched boundary condition
         const _vdiv = 1 / (1 + velo);
-        if (boundary_type.top == 'matched')
+        if (boundary_type.left == 'matched')
             for (let y = 1; y < grid_size.h - 1; y++)
                 grid.hn[y][0] = (grid.h[y][0] + velo * grid.h[y][1]) * _vdiv;
-        if (boundary_type.bottom == 'matched')
+        if (boundary_type.right == 'matched')
             for (let y = 1; y < grid_size.h - 1; y++)
                 grid.hn[y][grid_size.w - 1] = (grid.h[y][grid_size.w - 1] + velo * grid.h[y][grid_size.w - 2]) * _vdiv;
-        if (boundary_type.left == 'matched')
+        if (boundary_type.top == 'matched')
             for (let x = 1; x < grid_size.w - 1; x++)
                 grid.hn[0][x] = (grid.h[0][x] + velo * grid.h[1][x]) * _vdiv;
-        if (boundary_type.rights == 'matched')
+        if (boundary_type.bottom == 'matched')
             for (let x = 1; x < grid_size.w - 1; x++)
                 grid.hn[grid_size.h - 1][x] = (grid.h[grid_size.h - 1][x] + velo * grid.h[grid_size.h - 2][x]) * _vdiv;
 
@@ -121,6 +121,8 @@
             ctx.drawImage(img, 0, 0, cw, ch);
             crefrac_bg_small = ctx.getImageData(0, 0, cw, ch).data;
         };
+        if (img.complete)
+            img.onload();
     }
 
     let cdata_buf = canvas_data.getContext('2d').createImageData(grid_size.w, grid_size.h);
