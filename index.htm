@@ -34,6 +34,50 @@
     <canvas id="canvas-data" width="320" height="240"></canvas>
     <canvas id="canvas-slice" width="320" height="100"></canvas>
     <img id="refrac-bg" src="./assets/bg.jpg" crossorigin="anonymous">
+    <p>
+        <label for="enable-rain">Enable rain</label>
+        <input type="checkbox" id="enable-rain" checked>
+    </p>
+    <p>
+        <label for="circle-border">Circle border</label>
+        <input type="checkbox" id="circle-border">
+    </p>
+    <p>
+        Top border:
+        <input type="radio" id="border-top-matched" name="border-top" value="matched" checked>
+        <label for="border-top-matched">Matched</label>
+        <input type="radio" id="border-top-free" name="border-top" value="free">
+        <label for="border-top-free">Free</label>
+        <input type="radio" id="border-top-fixed" name="border-top" value="closed">
+        <label for="border-top-fixed">Fixed</label>
+    </p>
+    <p>
+        Bottom border:
+        <input type="radio" id="border-bottom-matched" name="border-bottom" value="matched" checked>
+        <label for="border-bottom-matched">Matched</label>
+        <input type="radio" id="border-bottom-free" name="border-bottom" value="free">
+        <label for="border-bottom-free">Free</label>
+        <input type="radio" id="border-bottom-fixed" name="border-bottom" value="closed">
+        <label for="border-bottom-fixed">Fixed</label>
+    </p>
+    <p>
+        Left border:
+        <input type="radio" id="border-left-matched" name="border-left" value="matched">
+        <label for="border-left-matched">Matched</label>
+        <input type="radio" id="border-left-free" name="border-left" value="free" checked>
+        <label for="border-left-free">Free</label>
+        <input type="radio" id="border-left-fixed" name="border-left" value="closed">
+        <label for="border-left-fixed">Fixed</label>
+    </p>
+    <p>
+        Right border:
+        <input type="radio" id="border-right-matched" name="border-right" value="matched">
+        <label for="border-right-matched">Matched</label>
+        <input type="radio" id="border-right-free" name="border-right" value="free" checked>
+        <label for="border-right-free">Free</label>
+        <input type="radio" id="border-right-fixed" name="border-right" value="closed">
+        <label for="border-right-fixed">Fixed</label>
+    </p>
     <script src="./src/water.js"></script>
 </body>
 
