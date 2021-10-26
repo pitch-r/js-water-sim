@@ -41,8 +41,10 @@
             const rad = pow2(grid_size.h / 2);
             for (let y = 0; y < grid_size.h; y++) {
                 for (let x = 0; x < grid_size.w; x++) {
-                    if (dist2(x - grid_size.w * 0.5, y - grid_size.h * 0.5) >= rad)
+                    if (dist2(x - grid_size.w * 0.5, y - grid_size.h * 0.5) >= rad) {
                         grid.h[y][x] = 0;
+                        grid.u[y][x] = 0;
+                    }
                 }
             }
         } else {
@@ -88,19 +90,20 @@
 
         if (!boundary_type.circle) {
             // Matched boundary condition
-            const _vdiv = 1 / (1 + velo);
+            const ratio = velo * 4;
+            const _vdiv = 1 / (1 + ratio);
             if (boundary_type.left == 'matched')
                 for (let y = 1; y < grid_size.h - 1; y++)
-                    grid.hn[y][0] = (grid.h[y][0] + velo * grid.h[y][1]) * _vdiv;
+                    grid.hn[y][0] = (grid.h[y][0] + ratio * grid.h[y][1]) * _vdiv;
             if (boundary_type.right == 'matched')
                 for (let y = 1; y < grid_size.h - 1; y++)
-                    grid.hn[y][grid_size.w - 1] = (grid.h[y][grid_size.w - 1] + velo * grid.h[y][grid_size.w - 2]) * _vdiv;
+                    grid.hn[y][grid_size.w - 1] = (grid.h[y][grid_size.w - 1] + ratio * grid.h[y][grid_size.w - 2]) * _vdiv;
             if (boundary_type.top == 'matched')
                 for (let x = 1; x < grid_size.w - 1; x++)
-                    grid.hn[0][x] = (grid.h[0][x] + velo * grid.h[1][x]) * _vdiv;
+                    grid.hn[0][x] = (grid.h[0][x] + ratio * grid.h[1][x]) * _vdiv;
             if (boundary_type.bottom == 'matched')
                 for (let x = 1; x < grid_size.w - 1; x++)
-                    grid.hn[grid_size.h - 1][x] = (grid.h[grid_size.h - 1][x] + velo * grid.h[grid_size.h - 2][x]) * _vdiv;
+                    grid.hn[grid_size.h - 1][x] = (grid.h[grid_size.h - 1][x] + ratio * grid.h[grid_size.h - 2][x]) * _vdiv;
         }
 
         // Swap buffer
