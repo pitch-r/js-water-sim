@@ -2,11 +2,13 @@
     // Configuration
     const grid_size = { w: 320, h: 240 }; // w*h
     let boundary_type = {
-        top: 'matched',
-        bottom: 'matched',
-        left: 'free',
-        right: 'free',
+        circle: false,
+        top: "matched",
+        bottom: "matched",
+        left: "free",
+        right: "free",
     };
+    let enable_rain = true;
     const velo = 0.7; // wave propagation in cell per timestep [ must <1 ]
     const timestep_per_frame = 3;
 
@@ -34,31 +36,44 @@
 
     // Simulation code
     function timestep() {
-        // Open/Free boundary condition
-        if (boundary_type.left == 'free')
-            for (let y = 1; y < grid_size.h - 1; y++)
-                grid.h[y][0] = grid.h[y][1];
-        if (boundary_type.right == 'free')
-            for (let y = 1; y < grid_size.h - 1; y++)
-                grid.h[y][grid_size.w - 1] = grid.h[y][grid_size.w - 2];
-        if (boundary_type.top == 'free')
-            for (let x = 1; x < grid_size.w - 1; x++)
-                grid.h[0].set(grid.h[1]);
-        if (boundary_type.bottom == 'free')
-            for (let x = 1; x < grid_size.w - 1; x++)
-                grid.h[grid_size.h - 1].set(grid.h[grid_size.h - 2]);
+        if (boundary_type.circle) {
+            // Circlular Boundary
+            const rad = pow2(grid_size.h / 2);
+            for (let y = 0; y < grid_size.h; y++) {
+                for (let x = 0; x < grid_size.w; x++) {
+                    if (dist2(x - grid_size.w * 0.5, y - grid_size.h * 0.5) >= rad) {
+                        grid.h[y][x] = 0;
+                        grid.u[y][x] = 0;
+                    }
+                }
+            }
+        } else {
+            // Open/Free boundary condition
+            if (boundary_type.left == 'free')
+                for (let y = 1; y < grid_size.h - 1; y++)
+                    grid.h[y][0] = grid.h[y][1];
+            if (boundary_type.right == 'free')
+                for (let y = 1; y < grid_size.h - 1; y++)
+                    grid.h[y][grid_size.w - 1] = grid.h[y][grid_size.w - 2];
+            if (boundary_type.top == 'free')
+                for (let x = 1; x < grid_size.w - 1; x++)
+                    grid.h[0].set(grid.h[1]);
+            if (boundary_type.bottom == 'free')
+                for (let x = 1; x < grid_size.w - 1; x++)
+                    grid.h[grid_size.h - 1].set(grid.h[grid_size.h - 2]);
 
-        // Closed boundary condition
-        if (boundary_type.left == 'closed')
-            for (let y = 1; y < grid_size.h - 1; y++)
-                grid.h[y][0] = 0;
-        if (boundary_type.right == 'closed')
-            for (let y = 1; y < grid_size.h - 1; y++)
-                grid.h[y][grid_size.w - 1] = 0;
-        if (boundary_type.top == 'closed')
-            grid.h[0].fill(0);
-        if (boundary_type.bottom == 'closed')
-            grid.h[grid_size.h - 1].fill(0);
+            // Closed boundary condition
+            if (boundary_type.left == 'closed')
+                for (let y = 1; y < grid_size.h - 1; y++)
+                    grid.h[y][0] = 0;
+            if (boundary_type.right == 'closed')
+                for (let y = 1; y < grid_size.h - 1; y++)
+                    grid.h[y][grid_size.w - 1] = 0;
+            if (boundary_type.top == 'closed')
+                grid.h[0].fill(0);
+            if (boundary_type.bottom == 'closed')
+                grid.h[grid_size.h - 1].fill(0);
+        }
 
         for (let y = 1; y < grid_size.h - 1; y++) {
             for (let x = 1; x < grid_size.w - 1; x++) {
@@ -73,20 +88,23 @@
             }
         }
 
-        // Matched boundary condition
-        const _vdiv = 1 / (1 + velo);
-        if (boundary_type.left == 'matched')
-            for (let y = 1; y < grid_size.h - 1; y++)
-                grid.hn[y][0] = (grid.h[y][0] + velo * grid.h[y][1]) * _vdiv;
-        if (boundary_type.right == 'matched')
-            for (let y = 1; y < grid_size.h - 1; y++)
-                grid.hn[y][grid_size.w - 1] = (grid.h[y][grid_size.w - 1] + velo * grid.h[y][grid_size.w - 2]) * _vdiv;
-        if (boundary_type.top == 'matched')
-            for (let x = 1; x < grid_size.w - 1; x++)
-                grid.hn[0][x] = (grid.h[0][x] + velo * grid.h[1][x]) * _vdiv;
-        if (boundary_type.bottom == 'matched')
-            for (let x = 1; x < grid_size.w - 1; x++)
-                grid.hn[grid_size.h - 1][x] = (grid.h[grid_size.h - 1][x] + velo * grid.h[grid_size.h - 2][x]) * _vdiv;
+        if (!boundary_type.circle) {
+            // Matched boundary condition
+            const ratio = velo * 4;
+            const _vdiv = 1 / (1 + ratio);
+            if (boundary_type.left == 'matched')
+                for (let y = 1; y < grid_size.h - 1; y++)
+                    grid.hn[y][0] = (grid.h[y][0] + ratio * grid.h[y][1]) * _vdiv;
+            if (boundary_type.right == 'matched')
+                for (let y = 1; y < grid_size.h - 1; y++)
+                    grid.hn[y][grid_size.w - 1] = (grid.h[y][grid_size.w - 1] + ratio * grid.h[y][grid_size.w - 2]) * _vdiv;
+            if (boundary_type.top == 'matched')
+                for (let x = 1; x < grid_size.w - 1; x++)
+                    grid.hn[0][x] = (grid.h[0][x] + ratio * grid.h[1][x]) * _vdiv;
+            if (boundary_type.bottom == 'matched')
+                for (let x = 1; x < grid_size.w - 1; x++)
+                    grid.hn[grid_size.h - 1][x] = (grid.h[grid_size.h - 1][x] + ratio * grid.h[grid_size.h - 2][x]) * _vdiv;
+        }
 
         // Swap buffer
         [grid.h, grid.hn] = [grid.hn, grid.h];
@@ -142,15 +160,22 @@
             ctx.fillText(fps.toFixed(0), 5, 12);
 
             // Draw boundary
-            ctx.fillStyle = "#F00";
-            if (boundary_type.top != 'matched')
-                ctx.fillRect(0, 0, grid_size.w, 2);
-            if (boundary_type.bottom != 'matched')
-                ctx.fillRect(0, grid_size.h - 2, grid_size.w, 2);
-            if (boundary_type.left != 'matched')
-                ctx.fillRect(0, 0, 2, grid_size.h);
-            if (boundary_type.right != 'matched')
-                ctx.fillRect(grid_size.w - 2, 0, 2, grid_size.h);
+            if (boundary_type.circle) {
+                ctx.strokeStyle = "#F00";
+                ctx.beginPath();
+                ctx.arc(grid_size.w / 2, grid_size.h / 2, grid_size.h / 2, 0, Math.PI * 2, true);
+                ctx.stroke();
+            } else {
+                ctx.fillStyle = "#F00";
+                if (boundary_type.top != 'matched')
+                    ctx.fillRect(0, 0, grid_size.w, 2);
+                if (boundary_type.bottom != 'matched')
+                    ctx.fillRect(0, grid_size.h - 2, grid_size.w, 2);
+                if (boundary_type.left != 'matched')
+                    ctx.fillRect(0, 0, 2, grid_size.h);
+                if (boundary_type.right != 'matched')
+                    ctx.fillRect(grid_size.w - 2, 0, 2, grid_size.h);
+            }
         }
         { // Cross-section view (slice)
             const cw = canvas_slice.width;
@@ -207,18 +232,24 @@
             ctx.putImageData(crefrac_buf, 0, 0);
 
             // Draw boundary
-            ctx.fillStyle = "#F00";
-            if (boundary_type.top != 'matched')
-                ctx.fillRect(0, 0, cw, 1);
-            if (boundary_type.bottom != 'matched')
-                ctx.fillRect(0, ch - 1, cw, 1);
-            if (boundary_type.left != 'matched')
-                ctx.fillRect(0, 0, 1, ch);
-            if (boundary_type.right != 'matched')
-                ctx.fillRect(cw - 1, 0, 1, ch);
+            if (boundary_type.circle) {
+                ctx.strokeStyle = "#F00";
+                ctx.beginPath();
+                ctx.arc(cw / 2, ch / 2, ch / 2, 0, Math.PI * 2, true);
+                ctx.stroke();
+            } else {
+                ctx.fillStyle = "#F00";
+                if (boundary_type.top != 'matched')
+                    ctx.fillRect(0, 0, cw, 1);
+                if (boundary_type.bottom != 'matched')
+                    ctx.fillRect(0, ch - 1, cw, 1);
+                if (boundary_type.left != 'matched')
+                    ctx.fillRect(0, 0, 1, ch);
+                if (boundary_type.right != 'matched')
+                    ctx.fillRect(cw - 1, 0, 1, ch);
+            }
         }
     }
-
 
     // Event Listeners
 
@@ -261,6 +292,24 @@
     canvas_refrac.addEventListener('touchend', handleTouchEvent);
     canvas_refrac.addEventListener('touchmove', handleTouchEvent);
 
+    function updateConfig() {
+        const getChecked = (id) => document.getElementById(id).checked;
+        const getRadioValue = (name) => {
+            for (let e of document.getElementsByName(name))
+                if (e.checked) return e.value;
+        };
+        boundary_type.circle = getChecked("circle-border");
+        boundary_type.top = getRadioValue("border-top");
+        boundary_type.bottom = getRadioValue("border-bottom");
+        boundary_type.left = getRadioValue("border-left");
+        boundary_type.right = getRadioValue("border-right");
+        enable_rain = getChecked("enable-rain");
+    }
+    document.querySelectorAll("input").forEach(
+        (e) => e.addEventListener("change", updateConfig)
+    );
+    updateConfig();
+
     // Add value to simulation grid in circular shape
     function paint_grid(grid_var, tx, ty, brush_size, power) {
         const brush2 = pow2(brush_size);
@@ -285,8 +334,8 @@
         if (mouse.pressed) {
             paint_grid(grid.h, mouse.x, mouse.y, 5, 0.3);
         } else {
-            if (frame % 60 == 0) {
-                for (let i = Math.random() * 2.9 | 0; i; i--) {
+            if (enable_rain && frame % 60 == 0) {
+                for (let i = (Math.random() * 2.9) | 0; i; i--) {
                     let tx = Math.random() * (grid_size.w - 2) + 1;
                     let ty = Math.random() * (grid_size.h - 2) + 1;
                     paint_grid(grid.h, tx, ty, 3, 1);
